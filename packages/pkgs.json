@@ -1,0 +1,42 @@
+[
+ {
+  "name": "PAHOMQTT",
+  "path": "/packages/iot/pahomqtt",
+  "ver": "latest"
+ },
+ {
+  "name": "WEBCLIENT",
+  "path": "/packages/iot/webclient",
+  "ver": "v2.2.0"
+ },
+ {
+  "name": "NETUTILS",
+  "path": "/packages/iot/netutils",
+  "ver": "latest"
+ },
+ {
+  "name": "CJSON",
+  "path": "/packages/language/JSON/cJSON",
+  "ver": "v1.7.17"
+ },
+ {
+  "name": "LITTLEFS",
+  "path": "/packages/system/littlefs",
+  "ver": "latest"
+ },
+ {
+  "name": "NXP_MCX_CMSIS_DRIVER",
+  "path": "/packages/peripherals/hal-sdk/nxp/nxp-mcx-cmsis",
+  "ver": "latest"
+ },
+ {
+  "name": "NXP_MCX_SERIES_DRIVER",
+  "path": "/packages/peripherals/hal-sdk/nxp/nxp-mcx-series",
+  "ver": "latest"
+ },
+ {
+  "name": "P3T1755",
+  "path": "/packages/peripherals/sensors/p3t1755",
+  "ver": "latest"
+ }
+]

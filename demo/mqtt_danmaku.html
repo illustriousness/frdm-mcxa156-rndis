@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <title>MQTT 弹幕墙 Demo</title>
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            background: #000;
+            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+
+        .config-panel {
+            padding: 10px;
+            background: #111;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            font-size: 12px;
+        }
+
+        .config-panel input {
+            background: #222;
+            border: 1px solid #333;
+            color: #fff;
+            padding: 4px 8px;
+            border-radius: 4px;
+            width: 210px;
+        }
+
+        .config-panel button {
+            padding: 5px 12px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            background: #1e90ff;
+            color: #fff;
+            font-size: 12px;
+        }
+
+        .status {
+            margin-left: 10px;
+            font-size: 12px;
+        }
+
+        .status span {
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        #status-text.connected {
+            background: #146c43;
+        }
+
+        #status-text.disconnected {
+            background: #842029;
+        }
+
+        .danmaku-container {
+            position: relative;
+            width: 100vw;
+            height: calc(100vh - 50px);
+            overflow: hidden;
+            background: radial-gradient(circle at top, #222, #000);
+        }
+
+        .bullet {
+            position: absolute;
+            white-space: nowrap;
+            padding: 4px 10px;
+            border-radius: 999px;
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            font-size: 14px;
+            pointer-events: none;
+            animation-name: fly;
+            animation-timing-function: linear;
+            animation-fill-mode: forwards;
+        }
+
+        @keyframes fly {
+            from {
+                transform: translateX(100vw);
+            }
+            to {
+                transform: translateX(-100%);
+            }
+        }
+    </style>
+</head>
+
+<body>
+<div class="config-panel">
+    <span>MQTT URL:</span>
+    <input id="brokerUrl" value="ws://192.168.1.232:8083/mqtt" />
+
+    <span>Topic:</span>
+    <input id="topic" value="danmaku/test" />
+
+    <span>用户名:</span>
+    <input id="username" placeholder="如无可空" />
+
+    <span>密码:</span>
+    <input id="password" type="password" placeholder="如无可空" />
+
+    <button id="connectBtn">连接并订阅</button>
+    <div class="status">
+        状态:<span id="status-text" class="disconnected">未连接</span>
+    </div>
+</div>
+
+<div class="danmaku-container" id="danmaku"></div>
+
+<script>
+    let client = null;
+
+    const userColors = {};
+    const colorPool = [
+        "#ff4444", "#44ff44", "#448aff", "#ffbb33",
+        "#ff66cc", "#00e5ff", "#c0ff00", "#ff9e80",
+        "#80d8ff", "#b388ff", "#ff80ab"
+    ];
+    let colorIndex = 0;
+
+    function getColorForUser(user) {
+        if (!userColors[user]) {
+            userColors[user] = colorPool[colorIndex % colorPool.length];
+            colorIndex++;
+        }
+        return userColors[user];
+    }
+
+    function logStatus(text, connected) {
+        const el = document.getElementById("status-text");
+        el.textContent = text;
+        el.className = connected ? "connected" : "disconnected";
+    }
+
+    document.getElementById("connectBtn").addEventListener("click", () => {
+        const url = document.getElementById("brokerUrl").value.trim();
+        const topic = document.getElementById("topic").value.trim();
+        const username = document.getElementById("username").value.trim();
+        const password = document.getElementById("password").value.trim();
+
+        if (!url || !topic) {
+            alert("请填写 MQTT URL 和 Topic");
+            return;
+        }
+
+        if (client) {
+            try { client.end(true); } catch (e) {}
+            client = null;
+        }
+
+        const options = { clean: true, connectTimeout: 4000 };
+        if (username) options.username = username;
+        if (password) options.password = password;
+
+        logStatus("连接中...", false);
+
+        client = mqtt.connect(url, options);
+
+        client.on("connect", () => {
+            logStatus("已连接，订阅:" + topic, true);
+            client.subscribe(topic);
+        });
+
+        client.on("message", (t, payload) => {
+            const raw = payload.toString();
+            let user = null;
+            let text = raw;
+
+            // ① JSON 格式 {"user":"xxx","text":"xxx"}
+            try {
+                const obj = JSON.parse(raw);
+                if (obj.user && obj.text) {
+                    user = obj.user;
+                    text = obj.text;
+                }
+            } catch (e) {}
+
+            // ② "用户: 内容" 格式
+            if (!user && raw.includes(":")) {
+                const parts = raw.split(":");
+                if (parts.length >= 2) {
+                    user = parts[0].trim();
+                    text = parts.slice(1).join(":").trim();
+                }
+            }
+
+            addBullet(text, user);
+        });
+
+        client.on("error", () => logStatus("连接错误", false));
+        client.on("reconnect", () => logStatus("重连中...", false));
+        client.on("close", () => logStatus("已断开", false));
+    });
+
+    function addBullet(text, user) {
+        const container = document.getElementById("danmaku");
+        const h = container.clientHeight || window.innerHeight;
+
+        const bullet = document.createElement("div");
+        bullet.className = "bullet";
+
+        bullet.textContent = user ? `${user}: ${text}` : text;
+
+        if (user) {
+            bullet.style.color = getColorForUser(user);
+        } else {
+            bullet.style.color = "#ffffff"; // 未解析出用户名 → 白色
+        }
+
+        bullet.style.top = (Math.random() * (h - 40) + 10) + "px";
+        bullet.style.animationDuration = (8 + Math.random() * 8) + "s";
+
+        container.appendChild(bullet);
+        bullet.addEventListener("animationend", () => container.removeChild(bullet));
+    }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,29 @@
+{
+    "folders": [
+        {
+            "name": "frdm-mcxa156",
+            "path": "."
+        },
+        {
+            "name": "rtthread",
+            "path": "rtthread"
+        }
+    ],
+    "settings": {
+        "search.exclude": {
+            "**/node_modules": true,
+            "**/bower_components": true,
+            "**/*.code-search": true,
+            "**/*build": true
+        },
+        "clangd.arguments": [
+            "--compile-commands-dir=./build",
+        ],
+        "mcuxpresso.debug.variableUseNaturalFormat": false,
+    },
+    "extensions": {
+        "recommendations": [
+            "NXPSemiconductors.mcuxpresso"
+        ]
+    }
+}

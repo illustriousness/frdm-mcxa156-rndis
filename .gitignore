@@ -1,0 +1,10 @@
+.cache
+build
+__pycache__
+.claude
+*.o
+*.d
+*.elf
+*.hex
+*.bin
+*.map
